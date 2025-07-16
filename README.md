@@ -28,19 +28,21 @@ Unregisters **GPOs** and **WMI filters** from a specific GPOADmin container (suc
 
 ---
 
-### 📜 `PostUserProvisioning.ps1`
-Executes post-creation logic for new AD users:
-- Clears group memberships
-- Sets `DisplayName`, `GivenName`, `Surname`, and `Title`
-- Moves users to specific OUs based on `Office`
-- Adds users to department-based security groups
-
-#### ✅ Requirements
-- ActiveDirectory PowerShell Module
-- Variables: `$Request.Name`, `$FirstName`, `$LastName`
-- Predefined OU and group naming structure
 
 ---
 
-## 📁 Folder Structure Recommendation
+## ⚠️ Notes
+
+- 🧪 These scripts are built for **internal environments or labs**
+- 🧰 You must adapt OU paths, domain names, and group structures to your environment
+- 🔒 Always test scripts in a safe, non-production environment before deployment
+
+---
+
+## 📄 License
+
+MIT License – free for personal and commercial use with attribution.
+
+---
+
 
