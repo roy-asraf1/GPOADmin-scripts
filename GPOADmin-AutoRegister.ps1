@@ -1,47 +1,69 @@
-# Import the GPOADmin module
-Import-Module 'D:\Program Files\Quest\GPOADmin\GPOADmin.psd1'
+# Define environment values
+$DomainName = "asraf.local"
+$DC = "DC01.asraf.local"
+$VCPath = "VCroot:\Test"
 
-# Get all managed Organizational Units (OUs) in GPOADmin
+# Load GPOADmin module
+Import-Module 'C:\Program Files\Quest\GPOADmin\GPOADmin.psd1'
+
+# Register any unregistered OUs (not managed yet)
+$AllUnregisteredOUs = Get-Unregistered -Domain $DomainName -OUs
+foreach ($OU in $AllUnregisteredOUs) {
+    Write-Host "📍 Registering unmanaged OU: $($OU.Name)" -ForegroundColor Magenta
+    Select-Register -VCData $OU -Container $VCPath
+}
+
+# Refresh managed OUs list after registering
 $AllManagedOUs = Get-AllManagedObjects -OUs
 
-# Get all unregistered GPOs from Active Directory
-$AllUnregisteredGPOs = Get-Unregistered -Domain Domain.Name -GPOs
+# Get unregistered GPOs, WMI, and (optionally) script objects
+$AllUnregisteredGPOs = Get-Unregistered -Domain $DomainName -GPOs
+$AllUnmanagedWMI = Get-Unregistered -Domain $DomainName -WMI
+# $AllUnmanagedScripts = Get-Unregistered -Domain $DomainName -Scripts # <- Uncomment if you want scripts
 
-# Get all unregistered WMI filters from Active Directory
-$AllUnamangedWMI = Get-Unregistered -Domain Domain.Name -WMI
-
-# Loop through each Managed OU
+# Loop through managed OUs
 foreach ($MOU in $AllManagedOUs) {
+    try {
+        $OUName = $MOU.Name
+        Write-Host "`n🔷 Processing OU: $OUName" -ForegroundColor Cyan
+        $MCurrentLinks = Get-ADOrganizationalUnit -Identity $OUName -Properties gplink -Server $DC
+    } catch {
+        Write-Host "❌ Could not access OU: $OUName" -ForegroundColor Red
+        continue
+    }
 
-    # Get current GPO links on the OU from Active Directory
-    $MCurrentLinks = Get-ADOrganizationalUnit -Identity $MOU.Name -Properties gplink -Server Domain.Name
-
-    # Loop through each linked GPO
+    # Loop through each GPO linked to the OU
     foreach ($MCurrentLink in $MCurrentLinks.LinkedGroupPolicyObjects) {
+        Write-Host "➡️  Found GPO Link: $MCurrentLink" -ForegroundColor Yellow
 
-        # Loop through each unregistered GPO
+        # Try to find if the linked GPO is unregistered
         foreach ($MCurrentGPO in $AllUnregisteredGPOs) {
-
-            # If the AD path of the GPO matches the linked GPO path
             if ($MCurrentGPO.ADPath -eq $MCurrentLink) {
+                Write-Host "✅ Registering GPO: $($MCurrentGPO.Name)" -ForegroundColor Green
+                Select-Register -VCData $MCurrentGPO -Container $VCPath
 
-                # Register the GPO in GPOADmin under the specified container
-                Select-Register -VCData $MCurrentGPO -Container "VCRoot:\Test"
-
-                # Get the newly registered GPO from Active Directory
+                # Get full GPO object to access WMI
                 $RegisteredGPO = Get-GPO -Guid $MCurrentGPO.Id
+                $WMIName = $RegisteredGPO.WMIFilter.Name
 
-                # Retrieve the name of the WMI filter used by the GPO (if any)
-                $WMIName = $RegisteredGPO.WMIFilter.name
+                # Register WMI filter if unregistered
+                if ($WMIName) {
+                    Write-Host "🔍 GPO uses WMI Filter: $WMIName" -ForegroundColor DarkCyan
+                    foreach ($CurrentWMI in $AllUnmanagedWMI) {
+                        if ($CurrentWMI.Name -eq $WMIName) {
+                            Write-Host "📎 Registering WMI Filter: $WMIName" -ForegroundColor Blue
+                            Select-Register -VCData $CurrentWMI -Container $VCPath
+                        }
+                    }
+                } else {
+                    Write-Host "ℹ️  No WMI Filter assigned to GPO." -ForegroundColor DarkGray
+                }
 
-                # Loop through each unregistered WMI filter
-                foreach ($CurrentWMI in $AllUnamangedWMI) {
-
-                    # If the WMI filter name matches the one used by the GPO
-                    if ($CurrentWMI.Name -eq $WMIName) {
-
-                        # Register the WMI filter in GPOADmin
-                        Select-Register -VCData $CurrentWMI -Container "VCroot:\Test"
+                # OPTIONAL: Register Script Objects linked to the GPO (e.g., Startup/Logon scripts)
+                foreach ($Script in $AllUnmanagedScripts) {
+                    if ($Script.Name -like "*$($RegisteredGPO.DisplayName)*") {
+                        Write-Host "📜 Registering Script Object: $($Script.Name)" -ForegroundColor DarkYellow
+                        Select-Register -VCData $Script -Container $VCPath
                     }
                 }
             }
