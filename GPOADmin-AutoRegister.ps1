@@ -1,4 +1,3 @@
-
 $DC = ("DC01.asraf.local") #need to add for poalim
 $VCPath = ("VCroot:\Test") #need to add for poalim
 $Domain = ("asraf.local") #need to add for poalim
@@ -19,6 +18,9 @@ foreach ($dom in $Domains){
     # Refresh managed OUs list after registering
     $AllManagedOUs = Get-AllManagedObjects -OUs
 
+
+
+
     $AllUnregisteredGPOs = Get-Unregistered -Domain $dom -GPOs
     $AllUnmanagedWMI = Get-Unregistered -Domain $dom -WMI
     $AllUnmanagedScripts = Get-Unregistered -Domain $dom -Scripts 
@@ -29,7 +31,7 @@ foreach ($dom in $Domains){
         foreach ($MOU in $AllManagedOUs) {
             try {
                 $OUName = $MOU.Name
-                Write-Host "`n🔷 Processing OU: $OUName" -ForegroundColor Cyan
+                Write-Host "n🔷 Processing OU: $OUName" -ForegroundColor Cyan
                 Get-ADOrganizationalUnit -Identity $MOU.Name -Properties gplink -Server $DC
                 $MCurrentLinks = Get-ADOrganizationalUnit -Identity $OUName -Properties gplink -Server $DC
             } catch {
@@ -68,22 +70,6 @@ foreach ($dom in $Domains){
                         Write-Host "📜 Registering Script: $($Script.Name)" -ForegroundColor Yellow
                         Select-Register -VCData $Script -Container $VCPath
                         }
-
-                        #$Date = Get-Date -Format "yyyyMMdd_HHmm"
-                        #$BackupPath = "C:\GPO_Backups\$dom\$Date"
-
-                        #if (!(Test-Path $BackupPath)) {
-                        #    New-Item -Path $BackupPath -ItemType Directory | Out-Null
-                        #}
-
-                        #Write-Host "💾 Backing up GPO: $($MCurrentGPO.Name) to $BackupPath" -ForegroundColor DarkGreen
-                        #try {
-                        #    Backup-GPO -Guid $MCurrentGPO.Id -Path $BackupPath -Domain $dom -Server $DC -ErrorAction Stop
-                        #} 
-                        #catch {
-                        #    Write-Host "⚠️ Failed to backup GPO: $($MCurrentGPO.Name)" -ForegroundColor Red
-                        #}
-
 
                     }
                 }
