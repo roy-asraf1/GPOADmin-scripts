@@ -30,7 +30,7 @@ $group.Controls.Add($txtDomain)
 
 # Label + DC
 $labelDC = New-Object System.Windows.Forms.Label
-$labelDC.Text = "Domain Controller:"
+$labelDC.Text = "DC:"
 $labelDC.Location = New-Object System.Drawing.Point(10, 55)
 $group.Controls.Add($labelDC)
 
@@ -91,11 +91,13 @@ $btnRun.Add_Click({
     $AllUnregisteredGPOs = Get-Unregistered -Domain $DomainName -GPOs
     $AllUnmanagedWMI = Get-Unregistered -Domain $DomainName -WMI
     $AllUnmanagedScripts = Get-Unregistered -Domain $DomainName -Scripts
+    $AllUnregisteredScripts = Get-Unregistered -Domain $DomainName -Scripts
 
     foreach ($MOU in $AllManagedOUs) {
         try {
             $OUName = $MOU.Name
             Write-Host "`n🔷 Processing OU: $OUName" -ForegroundColor Cyan
+            Get-ADOrganizationalUnit -Identity $MOU.Name -Properties gplink -Server $DC
             $MCurrentLinks = Get-ADOrganizationalUnit -Identity $OUName -Properties gplink -Server $DC
         } catch {
             Write-Host "❌ Could not access OU: $OUName" -ForegroundColor Red
@@ -104,6 +106,7 @@ $btnRun.Add_Click({
 
         foreach ($MCurrentLink in $MCurrentLinks.LinkedGroupPolicyObjects) {
             Write-Host "➡️  Found GPO Link: $MCurrentLink" -ForegroundColor Yellow
+
             foreach ($MCurrentGPO in $AllUnregisteredGPOs) {
                 if ($MCurrentGPO.ADPath -eq $MCurrentLink) {
                     Write-Host "✅ Registering GPO: $($MCurrentGPO.Name)" -ForegroundColor Green
@@ -124,16 +127,15 @@ $btnRun.Add_Click({
                         Write-Host "ℹ️  No WMI Filter assigned to GPO." -ForegroundColor DarkGray
                     }
 
-                    foreach ($Script in $AllUnmanagedScripts) {
-                        if ($Script.Name -like "*$($RegisteredGPO.DisplayName)*") {
-                            Write-Host "📜 Registering Script Object: $($Script.Name)" -ForegroundColor DarkYellow
-                            Select-Register -VCData $Script -Container $VCPath
+                    foreach ($Script in $AllUnregisteredScriptss) {
+                        Write-Host "📜 Registering Script: $($Script.Name)" -ForegroundColor Yellow
+                        Select-Register -VCData $Script -Container $VCPath
                         }
                     }
                 }
             }
         }
-    }
+    
 
     [System.Windows.Forms.MessageBox]::Show("Done processing GPOs and OUs!", "Completed", "OK", "Information")
 })
