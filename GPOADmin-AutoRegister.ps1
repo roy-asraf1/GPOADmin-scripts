@@ -1,4 +1,4 @@
-$DC = ("DC01.asraf.local") #need to add for poalim
+
 $VCPath = ("VCroot:\Test") #need to add for poalim
 $Domains = ("asraf.local") #need to add for poalim
 
@@ -32,8 +32,8 @@ foreach ($dom in $Domains){
         try {
             $OUName = $MOU.Name
             #Write-Host "n🔷 Processing OU: $OUName" -ForegroundColor Cyan
-            Get-ADOrganizationalUnit -Identity $MOU.Name -Properties gplink -Server $DC
-            $MCurrentLinks = Get-ADOrganizationalUnit -Identity $OUName -Properties gplink -Server $DC
+            Get-ADOrganizationalUnit -Identity $MOU.Name -Properties gplink 
+            $MCurrentLinks = Get-ADOrganizationalUnit -Identity $OUName -Properties gplink 
         } catch {
             Write-Host "❌ Could not access OU: $OUName" -ForegroundColor Red
             continue
