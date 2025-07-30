@@ -70,7 +70,9 @@ foreach ($dom in $Domains) {
 
         foreach ($Link in $LinkedGPOs) {
             try {
-                # Extract GPO GUID and fetch object
+                # Extract GPO GUID and fetch object [LDAP://cn={1A23B456-C78D-90EF-1234-56789ABCDEF0},cn=policies,cn=system,DC=asraf,DC=local]
+                #[0] - [LDAP://cn={1A23B456-C78D-90EF-1234-56789ABCDEF0} - .*\{ ignore until { (.+?) - first group '$1' - only first group
+
                 $GpoId = ($Link -split ',')[0] -replace '.*\{(.+?)\}.*', '$1'
                 $GPOObject = Get-GPO -Guid $GpoId -ErrorAction Stop
             } catch {
