@@ -5,3 +5,5 @@ Get-Service | Where-Object { $_.DisplayName -like "*GPO*" } | ForEach-Object {
 }
 
 Start-Transcript -Path "C:\Logs\ScriptLog.txt" -Append
+
+65536,65792,65793,65794,65795,131072,131073,131074,1835008,1573120,1573376,1049344,1049345,1049600,197888,197889,197890,197891,1049856
