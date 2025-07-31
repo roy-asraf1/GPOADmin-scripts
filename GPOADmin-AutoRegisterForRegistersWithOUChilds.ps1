@@ -10,12 +10,12 @@ foreach ($dom in $Domains) {
     # Refresh all objects
     $AllManagedOUs = Get-AllManagedObjects -OUs
     $AllManagedGPOs = Get-AllManagedObjects -GPOs
+
     $AllUnregisteredOUs = Get-Unregistered -Domain $dom -OUs
     $AllUnregisteredGPOs = Get-Unregistered -Domain $dom -GPOs
     $AllUnregisteredWMI = Get-Unregistered -Domain $dom -WMI
     $AllUnregisteredScripts = Get-Unregistered -Domain $dom -Scripts
 
-    # Recursive function to register child OUs
     function Register-ChildOUs {
         param (
             [string]$ParentOU
@@ -52,25 +52,27 @@ foreach ($dom in $Domains) {
         if ($IsManagedParent) {
             Register-ChildOUs -ParentOU $OUName
         } else {
-            Write-Host "⏭️ Skipping Child OUs for unregistered parent: $OUName" -ForegroundColor DarkGray
+            Write-Host "⏭ Skipping Child OUs for unregistered parent: $OUName" -ForegroundColor DarkGray
         }
 
         try {
             $OUObject = Get-ADOrganizationalUnit -Identity $OUName -Properties gPLink -ErrorAction Stop
             $LinkedGPOs = $OUObject.LinkedGroupPolicyObjects
         } catch {
-            Write-Host "⚠️ Cannot read OU or links: $OUName -> $($_.Exception.Message)" -ForegroundColor Yellow
+            Write-Host " Cannot read OU or links: $OUName -> $($_.Exception.Message)" -ForegroundColor Yellow
             continue
         }
 
         if (-not $LinkedGPOs -or $LinkedGPOs.Count -eq 0) {
-            Write-Host "ℹ️ No GPO links found for $OUName" -ForegroundColor Gray
+            Write-Host "ℹ️ No new GPO links found for $OUName" -ForegroundColor Gray
             continue
         }
 
         foreach ($Link in $LinkedGPOs) {
             try {
-                # Extract GPO GUID and fetch object
+                # Extract GPO GUID and fetch object [LDAP://cn={1A23B456-C78D-90EF-1234-56789ABCDEF0},cn=policies,cn=system,DC=asraf,DC=local]
+                #[0] - [LDAP://cn={1A23B456-C78D-90EF-1234-56789ABCDEF0} - .*\{ ignore until { (.+?) - first group '$1' - only first group
+
                 $GpoId = ($Link -split ',')[0] -replace '.*\{(.+?)\}.*', '$1'
                 $GPOObject = Get-GPO -Guid $GpoId -ErrorAction Stop
             } catch {
@@ -83,17 +85,18 @@ foreach ($dom in $Domains) {
             if (-not $ManagedGPO) {
                 $UnregisteredGPO = $AllUnregisteredGPOs | Where-Object { $_.ADPath -eq $Link }
                 if ($UnregisteredGPO) {
-                    Write-Host "✅ Registering Unregistered GPO: $($GPOObject.DisplayName)" -ForegroundColor Green
+                    Write-Host " Registering Unregistered GPO: $($GPOObject.DisplayName)" -ForegroundColor Green
                     try {
                         Select-Register -VCData $UnregisteredGPO -Container $VCPath -ErrorAction Stop
                     } catch {
                         Write-Host "❌ Failed to register GPO: $($GPOObject.DisplayName)" -ForegroundColor Red
                     }
-                } else {
-                    Write-Host "⚠️ Cannot find unregistered GPO: $($GPOObject.DisplayName)" -ForegroundColor Yellow
                 }
+                #else {
+                #    Write-Host "⚠️ Cannot find unregistered GPO: $($GPOObject.DisplayName)" -ForegroundColor Yellow
+                #}
             } else {
-                Write-Host "✔️ Already Registered GPO: $($GPOObject.DisplayName)" -ForegroundColor Cyan
+                Write-Host "Already Registered GPO: $($GPOObject.DisplayName)" -ForegroundColor Cyan
             }
 
             # Register WMI filter if needed
@@ -101,11 +104,11 @@ foreach ($dom in $Domains) {
                 $WMIName = $GPOObject.WMIFilter.Name
                 $UnregisteredWMI = $AllUnregisteredWMI | Where-Object { $_.Name -eq $WMIName }
                 if ($UnregisteredWMI) {
-                    Write-Host "📎 Registering WMI Filter: $WMIName" -ForegroundColor Blue
+                    Write-Host " Registering WMI Filter: $WMIName" -ForegroundColor Blue
                     try {
                         Select-Register -VCData $UnregisteredWMI -Container $VCPath -ErrorAction Stop
                     } catch {
-                        Write-Host "❌ Failed to register WMI: $WMIName" -ForegroundColor Red
+                        Write-Host " Failed to register WMI: $WMIName" -ForegroundColor Red
                     }
                 }
             }
@@ -114,10 +117,10 @@ foreach ($dom in $Domains) {
             foreach ($Script in $AllUnregisteredScripts) {
                     
                     try {
-                        Write-Host "📜 Registering Script: $($Script.Name)" -ForegroundColor Yellow
+                        Write-Host " Registering Script: $($Script.Name)" -ForegroundColor Yellow
                         select-Register -VCData $Script -Container $VCPath
                     } catch {
-                        Write-Host "❌ Failed to register Script: $($Script.Name)" -ForegroundColor Red
+                        Write-Host " Its register alredey: $($Script.Name)" -ForegroundColor Red
                     }
                 }
             }
@@ -125,11 +128,11 @@ foreach ($dom in $Domains) {
             # Ensure GPO is linked to OU
             $VCGPO = Get-AllManagedObjects -GPOs | Where-Object { $_.Name -eq $GPOObject.DisplayName }
             if ($VCGPO) {
-                Write-Host "🔗 Ensuring GPO is linked to OU: $OUName" -ForegroundColor DarkGreen
+                Write-Host "Ensuring GPO is linked to OU: $OUName" -ForegroundColor DarkGreen
                 try {
                     New-GPOLink -GPO $VCGPO -Domain $dom -OU $MOU -ErrorAction SilentlyContinue
                 } catch {
-                    Write-Host "⚠️ Could not link GPO $($GPOObject.DisplayName) to $OUName" -ForegroundColor Yellow
+                    Write-Host "link $($GPOObject.DisplayName) to $OUName" -ForegroundColor Yellow
                 }
             }
         }
