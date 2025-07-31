@@ -1,4 +1,4 @@
-$VCPath = "VCroot:\Test"
+$VCPath = "VCroot:\Test2"
 $Domains = @("asraf.local")
 
 # Load GPOADmin module
