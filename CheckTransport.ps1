@@ -3,13 +3,13 @@
 # ==============================
 
 # ===== Define your servers here =====
-$DNS_Server_IP        = "10.0.0.10"
-$WINS_Server_IP       = "10.0.0.11"
-$GPOADmin_Server_IP   = "10.0.0.20"
-$LDAP_or_ADLDS_IP     = "10.0.0.30"
-$ADLDS_Server_IP      = "10.0.0.31"
-$SQL_Server_IP        = "10.0.0.40"
-$FileShare_Server_IP  = "10.0.0.50"
+$DNS_Server_IP        = "10.0.0.10"   # DC01 is also the DNS
+$WINS_Server_IP       = "10.0.0.10"   # Assuming DC01 is WINS as well
+$GPOADmin_Server_IP   = "10.0.0.10"   # Assuming GPOADmin installed on DC01
+$LDAP_or_ADLDS_IP     = "10.0.0.10"   # LDAP on DC01
+$ADLDS_Server_IP      = "10.0.0.10"   # AD LDS same server (if installed)
+$SQL_Server_IP        = "10.0.0.10"   # Assuming SQL Server is also local
+$FileShare_Server_IP  = "10.0.0.10"   # GPO Archives (SMB) on DC01
 
 # =====================================
 
