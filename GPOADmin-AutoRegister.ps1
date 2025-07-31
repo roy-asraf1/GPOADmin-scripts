@@ -15,7 +15,6 @@ foreach ($dom in $Domains) {
     $AllUnregisteredWMI = Get-Unregistered -Domain $dom -WMI
     $AllUnregisteredScripts = Get-Unregistered -Domain $dom -Scripts
 
-    # Recursive function to register child OUs
     function Register-ChildOUs {
         param (
             [string]$ParentOU
@@ -52,14 +51,14 @@ foreach ($dom in $Domains) {
         if ($IsManagedParent) {
             Register-ChildOUs -ParentOU $OUName
         } else {
-            Write-Host "⏭️ Skipping Child OUs for unregistered parent: $OUName" -ForegroundColor DarkGray
+            Write-Host "⏭ Skipping Child OUs for unregistered parent: $OUName" -ForegroundColor DarkGray
         }
 
         try {
             $OUObject = Get-ADOrganizationalUnit -Identity $OUName -Properties gPLink -ErrorAction Stop
             $LinkedGPOs = $OUObject.LinkedGroupPolicyObjects
         } catch {
-            Write-Host "⚠️ Cannot read OU or links: $OUName -> $($_.Exception.Message)" -ForegroundColor Yellow
+            Write-Host " Cannot read OU or links: $OUName -> $($_.Exception.Message)" -ForegroundColor Yellow
             continue
         }
 
