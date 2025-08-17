@@ -1,3 +1,4 @@
+#current
 $VCPath = "VCroot:\Test"
 $Domains = @("asraf.local")
 
